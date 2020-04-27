@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 from os import path
 from tkinter import *
 from tkinter import ttk
@@ -9,29 +10,29 @@ DATA_PATH = '../data/data.pkl'
 if path.exists(DATA_PATH):
 	data = pd.read_pickle(DATA_PATH)
 else:
-	d = {'Case number': [1],
-		'Client number': [1],
-		'Patient': ["test"],
-		'Species': ["Canine"],
-		'Breed': ["Labrador"],
-		'Sex': ["Male"],
-		'Birthdate': ["05/05/2005"],
-		'Deathdate': ["05/05/2005"],
-		'Client last': ["John"],
-		'Client first': ["Doe"],
-		'Clinician': ["test"],
-		'City': ["test"],
-		'State': ["NH"],
-		'ZIP': ["55555"],
-		'Home phone': ["555-555-5555"],
-		'Work phone': ["555-555-5555"],
-		'Alt phone': ["555-555-5555"],
-		'RDVM last': ["John"],
-		'RDVM first': ["Doe"],
-		'Practice': ["test"],
-		'RDVM phone 1': ["555-555-5555"],
-		'RDVM phone 2': ["555-555-5555"],
-		'RDVM fax': ["555-555-5555"]}
+	d = {'Case number': [],
+		'Client number': [],
+		'Patient': [],
+		'Species': [],
+		'Breed': [],
+		'Sex': [],
+		'Birthdate': [],
+		'Deathdate': [],
+		'Client last': [],
+		'Client first': [],
+		'Clinician': [],
+		'City': [],
+		'State': [],
+		'ZIP': [],
+		'Home phone': [],
+		'Work phone': [],
+		'Alt phone': [],
+		'RDVM last': [],
+		'RDVM first': [],
+		'Practice': [],
+		'RDVM phone 1': [],
+		'RDVM phone 2': [],
+		'RDVM fax': []}
 	data = pd.DataFrame(d)
 
 # create a GUI window
@@ -114,4 +115,6 @@ f2.columnconfigure(0,weight=1)
 # start the GUI
 root.mainloop()
 
+if not path.exists('../data/'):
+	os.mkdir('../data/')
 data.to_pickle(DATA_PATH)
