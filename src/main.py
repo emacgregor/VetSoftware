@@ -14,7 +14,7 @@ RDVMS = ["Falmouth Veterinary Medicine"]
 class Form(Frame):
     def __init__(self, parent):
         Frame.__init__(self, parent)
-        self.data = self.loadData()
+        self.loadData()
 
         f1 = Frame(self)
         f1.pack(fill = X)
@@ -133,7 +133,7 @@ class Form(Frame):
     def loadData(self):
         # Read data
         if path.exists(DATA_PATH):
-            data = pd.read_pickle(DATA_PATH)
+            self.data = pd.read_pickle(DATA_PATH)
         else:
             # Or create data
             d = {'Case number': [],
@@ -159,8 +159,7 @@ class Form(Frame):
                 'RDVM phone 1': [],
                 'RDVM phone 2': [],
                 'RDVM fax': []}
-            data = pd.DataFrame(d)
-        return data
+            self.data = pd.DataFrame(d)
 
     def submit(self):
         newData = {
@@ -187,10 +186,10 @@ class Form(Frame):
             'RDVM phone 1': self.rdvmPhone1.get("1.0", END),
             'RDVM phone 2': self.rdvmPhone2.get("1.0", END),
             'RDVM fax': self.rdvmFAX.get("1.0", END)}
-        print(list(newData.values()))
+
         self.listBox.insert("", "end", values = list(newData.values()))
         self.data = self.data.append(newData, ignore_index = True)
-        print(self.data)
+        self.saveData()
 
     def saveData(self):
         # Create the data folder if it doesn't exist
@@ -214,5 +213,3 @@ f1.pack()
 
 # Start the GUI
 root.mainloop()
-
-f1.saveData()
