@@ -12,13 +12,49 @@ DEFAULT_COLUMN_WIDTH = 70
 CLINICIANS = ["JMcG", "EMcG"]
 RDVMS = ["Falmouth Veterinary Medicine"]
 
-class Form(Frame):
+class ScrollableFrame(ttk.Frame):
+    def __init__(self, container, height = 0, *args, **kwargs):
+        super().__init__(container, *args, **kwargs)
+        self.canvas = Canvas(self, height = height, highlightthickness = 0)
+        self.scrollable_frame = ttk.Frame(self.canvas)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(
+                scrollregion = self.canvas.bbox("all")
+            )
+        )
+        scrollbar = ttk.Scrollbar(self, orient = "horizontal", command = self.canvas.xview)
+        scrollbar2 = ttk.Scrollbar(self, orient = "vertical", command = self.canvas.yview)
+        self.canvas.grid(row = 0, column = 0, sticky = NSEW)
+        scrollbar.grid(row = 1, column = 0, sticky = EW)
+        scrollbar2.grid(row = 0, column = 1, sticky = NS)
+        self.canvas.configure(xscrollcommand = scrollbar.set, yscrollcommand = scrollbar2.set)
+
+        self.rowconfigure(0, weight = 1)
+        self.columnconfigure(0, weight = 1)
+
+        self.canvas.create_window((0, 0), window = self.scrollable_frame, anchor = "nw")
+
+        self.canvas.bind('<Enter>', self._bound_to_mousewheel)
+        self.canvas.bind('<Leave>', self._unbound_to_mousewheel)
+
+    def _bound_to_mousewheel(self, event):
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+    def _unbound_to_mousewheel(self, event):
+        self.canvas.unbind_all("<MouseWheel>")
+
+    def _on_mousewheel(self, event):
+        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+class Form(ttk.Frame):
     def __init__(self, parent):
         Frame.__init__(self, parent)
         self.loadData()
 
         f1 = Frame(self)
-        f1.pack(fill = X, padx = 10, pady = 10)
+        f1.pack(fill = X)
 
         # Labels for each field
         LEFT_LABEL_WIDTH = 16
@@ -52,14 +88,14 @@ class Form(Frame):
         self.caseNum = Text(f1, width = 12, height = 1)
         self.caseNum.grid(row = 0, column = 1, padx = 2)
         self.clientNum = Text(f1, width = 12, height = 1)
-        self.clientNum.grid(row = 0,column = 2, padx = 2)
+        self.clientNum.grid(row = 0, column = 2, padx = 2)
         self.patient = Text(f1, width = 12, height = 1)
-        self.patient.grid(row = 1,column = 1, padx = 2)
+        self.patient.grid(row = 1, column = 1, padx = 2)
         self.species = Text(f1, width = 12, height = 1)
-        self.species.grid(row = 2,column = 1, padx = 2)
+        self.species.grid(row = 2, column = 1, padx = 2)
         self.breed = Text(f1, width = 12, height = 1)
         self.breed.grid(row = 2, column = 2, padx = 2)
-        self.sex = Text(f1, width=4, height = 1)
+        self.sex = Text(f1, width = 4, height = 1)
         self.sex.grid(row = 2, column = 3, padx = 2)
         self.birth = DateEntry(f1)
         self.birth.grid(row = 3, column = 1, padx = 2)
@@ -111,11 +147,15 @@ class Form(Frame):
         self.submitButton.grid(row = 6, column = 5)
 
         # Frame 2 contains the information on pets
-        f2 = Frame(self)
-        f2.pack(padx = 10)
+        #f2 = Frame(self, width = 100, expand = False)
+        #f2.pack(pady = 10)
+
+        # Fills with the form information.
+        f2 = ScrollableFrame(self, height = 150)
 
         # Listbox all the basic pet information
-        self.listBox = ttk.Treeview(f2, columns = list(self.data.columns), show = 'headings')
+        self.numEntries = len(self.data.values)
+        self.listBox = ttk.Treeview(f2.scrollable_frame, height = self.numEntries, columns = list(self.data.columns), show = 'headings')
         i = 0
         for col in self.data.columns:
             self.listBox.heading(i, text = col)
@@ -129,15 +169,12 @@ class Form(Frame):
         # Get info on click
         self.listBox.bind("<Double-1>", self.fillFields)
 
-        # Scrollbars
-        xsb = ttk.Scrollbar(f2,orient = HORIZONTAL, command = self.listBox.xview)
-        ysb = ttk.Scrollbar(f2, orient = VERTICAL, command = self.listBox.yview)
-        self.listBox.configure(xscrollcommand = xsb.set, yscrollcommand = ysb.set)
-        self.listBox.grid(row = 0, column = 0,sticky = NSEW)
-        ysb.grid(row = 0, column = 1,sticky = NS)
-        xsb.grid(row = 1, column = 0,sticky = EW)
-        f2.rowconfigure(0, weight = 1)
-        f2.columnconfigure(0, weight = 1)
+        self.listBox.pack(fill = BOTH, expand = True)
+        f2.pack(fill = BOTH, expand = True, pady = 10)
+
+        self.tab = Echo(self)
+        self.tab.pack(fill = X)
+
 
     def loadData(self):
         # Read data
@@ -203,6 +240,9 @@ class Form(Frame):
         self.listBox.insert("", "end", values = list(newData.values()))
         self.data = self.data.append(newData, ignore_index = True)
         self.clearFields()
+
+        self.numEntries += 1
+        self.listBox.configure(height = self.numEntries)
 
         self.saveData()
 
@@ -314,18 +354,160 @@ class Form(Frame):
         widget.delete(1.0, "end-1c")
         widget.insert("end-1c", value)
 
+class Echo(Frame):
+    def __init__(self, parent):
+        Frame.__init__(self, parent)
+
+        f1 = Frame(self)
+        f1.pack(fill = X)
+
+        # Labels for each field
+        LABEL_WIDTH1 = 6
+        LABEL_WIDTH2 = 5
+        LABEL_WIDTH3 = 5
+        LABEL_WIDTH4 = 16
+        LABEL_WIDTH5 = 5
+        LABEL_WIDTH6 = 8
+        LABEL_WIDTH7 = 8
+        LABEL_WIDTH8 = 8
+        Label(f1, anchor = "w", width = LABEL_WIDTH1,
+            text = "Date").grid(row = 1, column = 0)
+        Label(f1, anchor = "w", width = LABEL_WIDTH1,
+            text = "Tape").grid(row = 2, column = 0)
+
+        self.date = DateEntry(f1)
+        self.date.grid(row = 1, column = 1, padx = 2)
+        self.tape = Text(f1, width = 12, height = 1)
+        self.tape.grid(row = 2, column = 1, padx = 2)
+
+        # Delete button
+        self.delete = Button(f1, text = "Delete", fg = "Black",
+            command = self.delete)
+        self.delete.grid(row = 4, column = 1)
+
+        Label(f1, anchor = "w", width = LABEL_WIDTH2,
+            text = "LBS").grid(row = 1, column = 2)
+        Label(f1, anchor = "w", width = LABEL_WIDTH2,
+            text = "KGS").grid(row = 2, column = 2)
+        Label(f1, anchor = "w", width = LABEL_WIDTH2,
+            text = "BSA").grid(row = 3, column = 2)
+        Label(f1, anchor = "w", width = LABEL_WIDTH2,
+            text = "HR").grid(row = 4, column = 2)
+        Label(f1, anchor = "w", width = LABEL_WIDTH2,
+            text = "RR").grid(row = 5, column = 2)
+
+        self.lbs = Text(f1, width = 4, height = 1)
+        self.lbs.grid(row = 1, column = 3, padx = 2)
+        self.kgs = Text(f1, width = 4, height = 1)
+        self.kgs.grid(row = 2, column = 3, padx = 2)
+        self.bsa = Text(f1, width = 4, height = 1)
+        self.bsa.grid(row = 3, column = 3, padx = 2)
+        self.hr = Text(f1, width = 4, height = 1)
+        self.hr.grid(row = 4, column = 3, padx = 2)
+        self.rr = Text(f1, width = 4, height = 1)
+        self.rr.grid(row = 5, column = 3, padx = 2)
+
+        Label(f1, anchor = "w", width = LABEL_WIDTH3,
+            text = "Ao").grid(row = 1, column = 4)
+        Label(f1, anchor = "w", width = LABEL_WIDTH3,
+            text = "LA").grid(row = 2, column = 4)
+        Label(f1, anchor = "w", width = LABEL_WIDTH3,
+            text = "LA2").grid(row = 3, column = 4)
+        Label(f1, anchor = "w", width = LABEL_WIDTH3,
+            text = "LA2D").grid(row = 4, column = 4)
+        Label(f1, anchor = "w", width = LABEL_WIDTH3,
+            text = "EPSS").grid(row = 5, column = 4)
+
+        self.ao = Text(f1, width = 4, height = 1)
+        self.ao.grid(row = 1, column = 5, padx = 2)
+        self.la = Text(f1, width = 4, height = 1)
+        self.la.grid(row = 2, column = 5, padx = 2)
+        self.la2 = Text(f1, width = 4, height = 1)
+        self.la2.grid(row = 3, column = 5, padx = 2)
+        self.la2d = Text(f1, width = 4, height = 1)
+        self.la2d.grid(row = 4, column = 5, padx = 2)
+        self.la2d = Text(f1, width = 4, height = 1)
+        self.la2d.grid(row = 5, column = 5, padx = 2)
+
+        Label(f1, anchor = "w", width = LABEL_WIDTH4,
+            text = "Calculation Group").grid(row = 1, column = 6)
+        self.calcgroup = ttk.Combobox(f1, width = LABEL_WIDTH4,
+            values = CLINICIANS)
+        self.calcgroup.grid(row = 2, column = 6, padx = 20)
+
+        Label(f1, anchor = "w", width = LABEL_WIDTH5,
+            text = "RV").grid(row = 1, column = 7)
+        Label(f1, anchor = "w", width = LABEL_WIDTH5,
+            text = "IVS").grid(row = 2, column = 7)
+        Label(f1, anchor = "w", width = LABEL_WIDTH5,
+            text = "LVID").grid(row = 3, column = 7)
+        Label(f1, anchor = "w", width = LABEL_WIDTH5,
+            text = "LVW").grid(row = 4, column = 7)
+        Label(f1, anchor = "w", width = LABEL_WIDTH5,
+            text = "VIDX").grid(row = 5, column = 7)
+
+        Label(f1, width = LABEL_WIDTH6,
+            text = "Systole").grid(row = 0, column = 8)
+
+        self.rv = Text(f1, width = LABEL_WIDTH6, height = 1)
+        self.rv.grid(row = 1, column = 8, padx = 2)
+        self.ivs = Text(f1, width = LABEL_WIDTH6, height = 1)
+        self.ivs.grid(row = 2, column = 8, padx = 2)
+        self.lvid = Text(f1, width = LABEL_WIDTH6, height = 1)
+        self.lvid.grid(row = 3, column = 8, padx = 2)
+        self.lvw = Text(f1, width = LABEL_WIDTH6, height = 1)
+        self.lvw.grid(row = 4, column = 8, padx = 2)
+        self.vidx = Text(f1, width = LABEL_WIDTH6, height = 1)
+        self.vidx.grid(row = 5, column = 8, padx = 2)
+
+        Label(f1, width = LABEL_WIDTH7,
+            text = "Diastole").grid(row = 0, column = 9)
+
+        self.rv2 = Text(f1, width = LABEL_WIDTH7, height = 1)
+        self.rv2.grid(row = 1, column = 9, padx = 2)
+        self.ivs2 = Text(f1, width = LABEL_WIDTH7, height = 1)
+        self.ivs2.grid(row = 2, column = 9, padx = 2)
+        self.lvid2 = Text(f1, width = LABEL_WIDTH7, height = 1)
+        self.lvid2.grid(row = 3, column = 9, padx = 2)
+        self.lvw2 = Text(f1, width = LABEL_WIDTH7, height = 1)
+        self.lvw2.grid(row = 4, column = 9, padx = 2)
+        self.vidx2 = Text(f1, width = LABEL_WIDTH7, height = 1)
+        self.vidx2.grid(row = 5, column = 9, padx = 2)
+
+        Label(f1, width = LABEL_WIDTH8, text = "Δ").grid(row = 0, column = 10)
+
+        self.ivs3 = Text(f1, width = LABEL_WIDTH8, height = 1)
+        self.ivs3.grid(row = 2, column = 10, padx = 2)
+        self.lvid3 = Text(f1, width = LABEL_WIDTH8, height = 1)
+        self.lvid3.grid(row = 3, column = 10, padx = 2)
+        self.lvw3 = Text(f1, width = LABEL_WIDTH8, height = 1)
+        self.lvw3.grid(row = 4, column = 10, padx = 2)
+        self.vidx3 = Text(f1, width = LABEL_WIDTH8, height = 1)
+        self.vidx3.grid(row = 5, column = 10, padx = 2)
+
+        self.indices = Button(f1, text = "Indices", fg = "Black",
+            command = self.indices)
+        self.indices.grid(row = 2, column = 11)
+
+    def delete(self):
+        # TODO make this work
+        print("Delete")
+
+    def indices(self):
+        # TODO make this work
+        print("Indices")
+
 
 # Create a GUI window
 root = Tk()
 
-# Set the background colour of GUI window, size, and name
-root.configure()
 root.title("Veterinary Software")
-root.geometry("1000x500")
+root.geometry("860x700")
 
 # Fills with the form information.
-f1 = Form(root)
-f1.pack()
+f1 = ScrollableFrame(root)
+f2 = Form(f1.scrollable_frame).pack(padx = 15, pady = 15, fill = BOTH, expand = True)
+f1.pack(fill = BOTH, expand = True)
 
 # Start the GUI
 root.mainloop()
