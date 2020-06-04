@@ -7,7 +7,8 @@ from tkinter import ttk
 from tkcalendar import DateEntry
 
 DATA_DIR = '../data/'
-DATA_PATH = DATA_DIR + 'data.pkl'
+DATA_PATH_CLIENT = DATA_DIR + 'client.pkl'
+DATA_PATH_ECHO = DATA_DIR + 'echo.pkl'
 DEFAULT_COLUMN_WIDTH = 70
 CLINICIANS = ["JMcG", "EMcG"]
 RDVMS = ["Falmouth Veterinary Medicine"]
@@ -178,8 +179,8 @@ class Form(ttk.Frame):
 
     def loadData(self):
         # Read data
-        if path.exists(DATA_PATH):
-            self.data = pd.read_pickle(DATA_PATH)
+        if path.exists(DATA_PATH_CLIENT):
+            self.data = pd.read_pickle(DATA_PATH_CLIENT)
         else:
             # Or create data
             d = {'Case number': [],
@@ -251,7 +252,7 @@ class Form(ttk.Frame):
         if not path.exists(DATA_DIR):
             os.mkdir(DATA_DIR)
         # Save data
-        self.data.to_pickle(DATA_PATH)
+        self.data.to_pickle(DATA_PATH_CLIENT)
 
     def clearFields(self):
         self.setText(self.caseNum, "")
@@ -282,37 +283,38 @@ class Form(ttk.Frame):
 
         self.submitButton.configure(text = "Submit", command = self.submit)
 
-    def fillFields(self, event):
-        item = self.listBox.selection()[0]
-        values = self.listBox.item(item, "values")
+    def fillFields(self, event = None):
+        if self.listBox.selection():
+            item = self.listBox.selection()[0]
+            values = self.listBox.item(item, "values")
 
-        self.setText(self.caseNum, values[0])
-        self.setText(self.clientNum, values[1])
-        self.setText(self.patient, values[2])
-        self.setText(self.species, values[3])
-        self.setText(self.breed, values[4])
-        self.setText(self.sex, values[5])
-        self.birth.set_date(values[6])
-        self.death.set_date(values[7])
-        self.la.set_date(values[8])
-        self.fu.set_date(values[9])
-        self.setText(self.clientLast, values[10])
-        self.setText(self.clientFirst, values[11])
-        self.clinicianText.set(values[12])
-        self.setText(self.city, values[13])
-        self.setText(self.state, values[14])
-        self.setText(self.zipCode, values[15])
-        self.setText(self.homePhone, values[16])
-        self.setText(self.workPhone, values[17])
-        self.setText(self.altPhone, values[18])
-        self.setText(self.rdvmLast, values[19])
-        self.setText(self.rdvmFirst, values[20])
-        self.practiceText.set(values[21])
-        self.setText(self.rdvmPhone1, values[22])
-        self.setText(self.rdvmPhone2, values[23])
-        self.setText(self.rdvmFAX, values[24])
+            self.setText(self.caseNum, values[0])
+            self.setText(self.clientNum, values[1])
+            self.setText(self.patient, values[2])
+            self.setText(self.species, values[3])
+            self.setText(self.breed, values[4])
+            self.setText(self.sex, values[5])
+            self.birth.set_date(values[6])
+            self.death.set_date(values[7])
+            self.la.set_date(values[8])
+            self.fu.set_date(values[9])
+            self.setText(self.clientLast, values[10])
+            self.setText(self.clientFirst, values[11])
+            self.clinicianText.set(values[12])
+            self.setText(self.city, values[13])
+            self.setText(self.state, values[14])
+            self.setText(self.zipCode, values[15])
+            self.setText(self.homePhone, values[16])
+            self.setText(self.workPhone, values[17])
+            self.setText(self.altPhone, values[18])
+            self.setText(self.rdvmLast, values[19])
+            self.setText(self.rdvmFirst, values[20])
+            self.practiceText.set(values[21])
+            self.setText(self.rdvmPhone1, values[22])
+            self.setText(self.rdvmPhone2, values[23])
+            self.setText(self.rdvmFAX, values[24])
 
-        self.submitButton.configure(text = "Modify", command = lambda: self.modify(item))
+            self.submitButton.configure(text = "Modify", command = lambda: self.modify(item))
 
     def modify(self, item):
         moddedData = {
@@ -354,9 +356,31 @@ class Form(ttk.Frame):
         widget.delete(1.0, "end-1c")
         widget.insert("end-1c", value)
 
+# Thanks to Bryan Oakley on Stack Overflow https://stackoverflow.com/questions/40617515/python-tkinter-text-modified-callback
+class CustomText(Text):
+    def __init__(self, *args, **kwargs):
+        """A text widget that report on internal widget commands"""
+        Text.__init__(self, *args, **kwargs)
+
+        # create a proxy for the underlying widget
+        self._orig = self._w + "_orig"
+        self.tk.call("rename", self._w, self._orig)
+        self.tk.createcommand(self._w, self._proxy)
+
+    def _proxy(self, command, *args):
+        cmd = (self._orig, command) + args
+        result = self.tk.call(cmd)
+
+        if command in ("insert", "delete", "replace"):
+            self.event_generate("<<TextModified>>")
+
+        return result
+
 class Echo(Frame):
     def __init__(self, parent):
         Frame.__init__(self, parent)
+
+        self.loadData()
 
         f1 = Frame(self)
         f1.pack(fill = X)
@@ -369,7 +393,7 @@ class Echo(Frame):
         LABEL_WIDTH5 = 5
         LABEL_WIDTH6 = 8
         LABEL_WIDTH7 = 8
-        LABEL_WIDTH8 = 8
+        LABEL_WIDTH8 = 10
         Label(f1, anchor = "w", width = LABEL_WIDTH1,
             text = "Date").grid(row = 1, column = 0)
         Label(f1, anchor = "w", width = LABEL_WIDTH1,
@@ -381,8 +405,7 @@ class Echo(Frame):
         self.tape.grid(row = 2, column = 1, padx = 2)
 
         # Delete button
-        self.delete = Button(f1, text = "Delete", fg = "Black",
-            command = self.delete)
+        self.delete = Button(f1, text = "Delete", fg = "Black", state = "disabled")
         self.delete.grid(row = 4, column = 1)
 
         Label(f1, anchor = "w", width = LABEL_WIDTH2,
@@ -426,8 +449,8 @@ class Echo(Frame):
         self.la2.grid(row = 3, column = 5, padx = 2)
         self.la2d = Text(f1, width = 4, height = 1)
         self.la2d.grid(row = 4, column = 5, padx = 2)
-        self.la2d = Text(f1, width = 4, height = 1)
-        self.la2d.grid(row = 5, column = 5, padx = 2)
+        self.epss = Text(f1, width = 4, height = 1)
+        self.epss.grid(row = 5, column = 5, padx = 2)
 
         Label(f1, anchor = "w", width = LABEL_WIDTH4,
             text = "Calculation Group").grid(row = 1, column = 6)
@@ -449,53 +472,296 @@ class Echo(Frame):
         Label(f1, width = LABEL_WIDTH6,
             text = "Systole").grid(row = 0, column = 8)
 
-        self.rv = Text(f1, width = LABEL_WIDTH6, height = 1)
+        self.rv = CustomText(f1, width = LABEL_WIDTH6, height = 1)
         self.rv.grid(row = 1, column = 8, padx = 2)
-        self.ivs = Text(f1, width = LABEL_WIDTH6, height = 1)
+        self.ivs = CustomText(f1, width = LABEL_WIDTH6, height = 1)
         self.ivs.grid(row = 2, column = 8, padx = 2)
-        self.lvid = Text(f1, width = LABEL_WIDTH6, height = 1)
+        self.lvid = CustomText(f1, width = LABEL_WIDTH6, height = 1)
         self.lvid.grid(row = 3, column = 8, padx = 2)
-        self.lvw = Text(f1, width = LABEL_WIDTH6, height = 1)
+        self.lvw = CustomText(f1, width = LABEL_WIDTH6, height = 1)
         self.lvw.grid(row = 4, column = 8, padx = 2)
-        self.vidx = Text(f1, width = LABEL_WIDTH6, height = 1)
+        self.vidxtext = StringVar()
+        self.vidx = Entry(f1, textvariable = self.vidxtext, width = LABEL_WIDTH8, state = 'readonly')
         self.vidx.grid(row = 5, column = 8, padx = 2)
 
         Label(f1, width = LABEL_WIDTH7,
             text = "Diastole").grid(row = 0, column = 9)
 
-        self.rv2 = Text(f1, width = LABEL_WIDTH7, height = 1)
+        self.rv2 = CustomText(f1, width = LABEL_WIDTH7, height = 1)
         self.rv2.grid(row = 1, column = 9, padx = 2)
-        self.ivs2 = Text(f1, width = LABEL_WIDTH7, height = 1)
+        self.ivs2 = CustomText(f1, width = LABEL_WIDTH7, height = 1)
         self.ivs2.grid(row = 2, column = 9, padx = 2)
-        self.lvid2 = Text(f1, width = LABEL_WIDTH7, height = 1)
+        self.lvid2 = CustomText(f1, width = LABEL_WIDTH7, height = 1)
         self.lvid2.grid(row = 3, column = 9, padx = 2)
-        self.lvw2 = Text(f1, width = LABEL_WIDTH7, height = 1)
+        self.lvw2 = CustomText(f1, width = LABEL_WIDTH7, height = 1)
         self.lvw2.grid(row = 4, column = 9, padx = 2)
-        self.vidx2 = Text(f1, width = LABEL_WIDTH7, height = 1)
+        self.vidxtext2 = StringVar()
+        self.vidx2 = Entry(f1, textvariable = self.vidxtext2, width = LABEL_WIDTH8, state = 'readonly')
         self.vidx2.grid(row = 5, column = 9, padx = 2)
+
+        self.rv.bind("<<TextModified>>", self.updateDeltas)
+        self.rv2.bind("<<TextModified>>", self.updateDeltas)
+        self.ivs.bind("<<TextModified>>", self.updateDeltas)
+        self.ivs2.bind("<<TextModified>>", self.updateDeltas)
+        self.lvid.bind("<<TextModified>>", self.updateDeltas)
+        self.lvid2.bind("<<TextModified>>", self.updateDeltas)
+        self.lvw.bind("<<TextModified>>", self.updateDeltas)
+        self.lvw2.bind("<<TextModified>>", self.updateDeltas)
 
         Label(f1, width = LABEL_WIDTH8, text = "Δ").grid(row = 0, column = 10)
 
-        self.ivs3 = Text(f1, width = LABEL_WIDTH8, height = 1)
+        self.delt1 = StringVar()
+        self.delt2 = StringVar()
+        self.delt3 = StringVar()
+        self.delt4 = StringVar()
+        self.ivs3 = Entry(f1, textvariable = self.delt1, width = LABEL_WIDTH8, state = 'readonly')
         self.ivs3.grid(row = 2, column = 10, padx = 2)
-        self.lvid3 = Text(f1, width = LABEL_WIDTH8, height = 1)
+        self.lvid3 = Entry(f1, textvariable = self.delt2, width = LABEL_WIDTH8, state = 'readonly')
         self.lvid3.grid(row = 3, column = 10, padx = 2)
-        self.lvw3 = Text(f1, width = LABEL_WIDTH8, height = 1)
+        self.lvw3 = Entry(f1, textvariable = self.delt3, width = LABEL_WIDTH8, state = 'readonly')
         self.lvw3.grid(row = 4, column = 10, padx = 2)
-        self.vidx3 = Text(f1, width = LABEL_WIDTH8, height = 1)
+        self.vidx3 = Entry(f1, textvariable = self.delt4, width = LABEL_WIDTH8, state = 'readonly')
         self.vidx3.grid(row = 5, column = 10, padx = 2)
 
         self.indices = Button(f1, text = "Indices", fg = "Black",
             command = self.indices)
         self.indices.grid(row = 2, column = 11)
 
-    def delete(self):
+        # Fills with the form information.
+        f2 = ScrollableFrame(self, height = 150)
+
+        # Listbox all the basic pet information
+        self.numEntries = len(self.data.values)
+        self.listBox = ttk.Treeview(f2.scrollable_frame, height = self.numEntries, columns = list(self.data.columns), show = 'headings')
+        i = 0
+        for col in self.data.columns:
+            self.listBox.heading(i, text = col)
+            self.listBox.column(i, width = DEFAULT_COLUMN_WIDTH)
+            i += 1
+        i = 0
+        for item in self.data.values:
+            self.listBox.insert("", "end", text = str(i), values = list(item))
+            i += 1
+
+        # Get info on click
+        self.listBox.bind("<Double-1>", self.fillFields)
+
+        self.listBox.pack(fill = BOTH, expand = True)
+        f2.pack(fill = BOTH, expand = True, pady = 10)
+
+    def updateDeltas(self, event = None):
+        #TODO: Find out how these delts work
+        try:
+            self.delt1.set(float(self.ivs.get("1.0", "end-1c"))
+                - float(self.ivs2.get("1.0", "end-1c")))
+        except ValueError:
+            self.delt1.set("")
+        try:
+            self.delt2.set(float(self.lvid.get("1.0", "end-1c"))
+                - float(self.lvid2.get("1.0", "end-1c")))
+        except ValueError:
+            self.delt2.set("")
+        try:
+            self.delt3.set(float(self.lvw.get("1.0", "end-1c"))
+                - float(self.lvw2.get("1.0", "end-1c")))
+        except ValueError:
+            self.delt3.set("")
+
+    def saveData(self):
+        # Create the data folder if it doesn't exist
+        if not path.exists(DATA_DIR):
+            os.mkdir(DATA_DIR)
+        # Save data
+        self.data.to_pickle(DATA_PATH_ECHO)
+
+    def loadData(self):
+        # Read data
+        if path.exists(DATA_PATH_ECHO):
+            self.data = pd.read_pickle(DATA_PATH_ECHO)
+        else:
+            # Or create data
+            d = {'Date': [],
+                'Tape': [],
+                'LBS': [],
+                'HR': [],
+                'RR': [],
+                'RVd': [],
+                'IVSd': [],
+                'LVIDd': [],
+                'LVWd': [],
+                'RVs': [],
+                'IVSs': [],
+                'LVIDs': [],
+                'LVWs': [],
+                'Ao': [],
+                'LA': [],
+                'LAm': [],
+                'EPSS': [],
+                'SAxLA D': [],
+                'SAx Ao D': [],
+                'SAx LA A': [],
+                'LAx LA D': [],
+                'Dep': [],
+                'Len': [],
+                'Gir': [],
+                'Wld': []}
+            self.data = pd.DataFrame(d)
+
+    def fillFields(self, event = None):
+        if self.listBox.selection():
+            item = self.listBox.selection()[0]
+            values = self.listBox.item(item, "values")
+
+            self.date.set_date(values[0])
+            self.setText(self.tape, values[1])
+            self.setText(self.lbs, values[2])
+            self.setText(self.kgs, "") #TODO: Where are some of these fields stored?
+            self.setText(self.bsa, "")
+            self.setText(self.hr, values[3])
+            self.setText(self.rr, values[4])
+            self.setText(self.ao, values[13])
+            self.setText(self.la, values[14])
+            self.setText(self.la2, "")
+            self.setText(self.la2d, "")
+            self.setText(self.epss, values[16])
+            self.calcgroup.set("")
+            self.setText(self.rv, values[9])
+            self.setText(self.rv2, values[5])
+            self.setText(self.ivs, values[10])
+            self.setText(self.ivs2, values[6])
+            self.setText(self.lvid, values[11])
+            self.setText(self.lvid2, values[7])
+            self.setText(self.lvw, values[12])
+            self.setText(self.lvw2, values[8])
+            self.vidxtext.set("")
+            self.vidxtext2.set("")
+            self.updateDeltas()
+
+            self.delete.configure(state = "normal", command = lambda: self.deleteDataItem(item))
+
+    def modify(self, item):
+        moddedData = {
+            'Date': self.date.get(),
+            'Tape': self.tape.get("1.0", "end-1c"),
+            'LBS': self.lbs.get("1.0", "end-1c"),
+            'HR': self.hr.get("1.0", "end-1c"),
+            'RR': self.rr.get("1.0", "end-1c"),
+            'RVd': self.rv2.get("1.0", "end-1c"),
+            'IVSd': self.ivs2.get("1.0", "end-1c"),
+            'LVIDd': self.lvid2.get("1.0", "end-1c"),
+            'LVWd': self.lvw2.get("1.0", "end-1c"),
+            'RVs': self.rv.get("1.0", "end-1c"),
+            'IVSs': self.ivs.get("1.0", "end-1c"),
+            'LVIDs': self.lvid.get("1.0", "end-1c"),
+            'LVWs': self.lvw.get("1.0", "end-1c"),
+            'Ao': self.ao.get("1.0", "end-1c"),
+            'LA': self.la.get("1.0", "end-1c"),
+            'LAm': "", # TODO: What are these fields?
+            'EPSS': "",
+            'SAxLA D': "",
+            'SAx Ao D': "",
+            'SAx LA A': "",
+            'LAx LA D': "",
+            'Dep': "",
+            'Len': "",
+            'Gir': "",
+            'Wld': ""}
+        self.listBox.item(item, values = list(moddedData.values()))
+
+        row = int(item[-1]) - 1
+
+        self.data.loc[row] = list(moddedData.values())
+        self.clearFields()
+
+        self.saveData()
+
+    def clearFields(self):
+        self.date.set_date(date.today())
+        self.setText(self.tape, "")
+        self.setText(self.lbs, "")
+        self.setText(self.kgs, "")
+        self.setText(self.bsa, "")
+        self.setText(self.hr, "")
+        self.setText(self.rr, "")
+        self.setText(self.ao, "")
+        self.setText(self.la, "")
+        self.setText(self.la2, "")
+        self.setText(self.la2d, "")
+        self.setText(self.epss, "")
+        self.calcgroup.set("")
+        self.setText(self.rv, "")
+        self.setText(self.rv2, "")
+        self.setText(self.ivs, "")
+        self.setText(self.ivs2, "")
+        self.delt1.set("")
+        self.setText(self.lvid, "")
+        self.setText(self.lvid2, "")
+        self.delt2.set("")
+        self.setText(self.lvw, "")
+        self.setText(self.lvw2, "")
+        self.delt3.set("")
+        self.vidxtext.set("")
+        self.vidxtext2.set("")
+        self.delt4.set("")
+
+        self.delete.configure(state = "disabled", command = None)
+
+    def deleteDataItem(self, item):
         # TODO make this work
-        print("Delete")
+        row = int(item[-1]) - 1
+        self.listBox.delete(item)
+
+        self.numEntries -= 1
+        self.listBox.configure(height = self.numEntries)
+
+        self.data = self.data.drop(self.data.index[row])
+        self.saveData()
+        self.clearFields()
 
     def indices(self):
-        # TODO make this work
+        # TODO this is acting like a submit, when it really does something else
         print("Indices")
+
+
+        newData = {
+            'Date': self.date.get(),
+            'Tape': self.tape.get("1.0", "end-1c"),
+            'LBS': self.lbs.get("1.0", "end-1c"),
+            'HR': self.hr.get("1.0", "end-1c"),
+            'RR': self.rr.get("1.0", "end-1c"),
+            'RVd': self.rv2.get("1.0", "end-1c"),
+            'IVSd': self.ivs2.get("1.0", "end-1c"),
+            'LVIDd': self.lvid2.get("1.0", "end-1c"),
+            'LVWd': self.lvw2.get("1.0", "end-1c"),
+            'RVs': self.rv.get("1.0", "end-1c"),
+            'IVSs': self.ivs.get("1.0", "end-1c"),
+            'LVIDs': self.lvid.get("1.0", "end-1c"),
+            'LVWs': self.lvw.get("1.0", "end-1c"),
+            'Ao': self.ao.get("1.0", "end-1c"),
+            'LA': self.la.get("1.0", "end-1c"),
+            'LAm': "", # TODO: What are these fields?
+            'EPSS': "",
+            'SAxLA D': "",
+            'SAx Ao D': "",
+            'SAx LA A': "",
+            'LAx LA D': "",
+            'Dep': "",
+            'Len': "",
+            'Gir': "",
+            'Wld': ""}
+
+        self.listBox.insert("", "end", values = list(newData.values()))
+        self.data = self.data.append(newData, ignore_index = True)
+        self.clearFields()
+
+        self.numEntries += 1
+        self.listBox.configure(height = self.numEntries)
+
+        self.saveData()
+
+    def setText(self, widget, value):
+        widget.delete(1.0, "end-1c")
+        widget.insert("end-1c", value)
 
 
 # Create a GUI window
