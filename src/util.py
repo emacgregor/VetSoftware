@@ -1,3 +1,4 @@
+import os
 from tkinter import *
 from tkinter import ttk
 
@@ -6,6 +7,17 @@ DATA_PATH_CLIENT = DATA_DIR + 'client.pkl'
 DATA_PATH_ECHO = DATA_DIR + 'echo.pkl'
 DEFAULT_COLUMN_WIDTH = 70
 CLINICIANS = ["JMcG", "EMcG"]
+
+def setText(widget, value):
+    widget.delete(1.0, "end-1c")
+    widget.insert("end-1c", value)
+
+def saveData(data, path):
+    # Create the data folder if it doesn't exist
+    if not os.path.exists(DATA_DIR):
+        os.mkdir(DATA_DIR)
+    # Save data
+    data.to_pickle(path)
 
 # Thanks to Bryan Oakley on Stack Overflow https://stackoverflow.com/questions/40617515/python-tkinter-text-modified-callback
 class CustomText(Text):

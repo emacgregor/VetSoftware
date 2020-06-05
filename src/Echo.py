@@ -9,6 +9,10 @@ import pandas as pd
 class Echo(Frame):
     def __init__(self, parent):
         Frame.__init__(self, parent)
+        self.parent = parent
+        self.client = self.parent.client
+        self.clientTextVar = StringVar()
+        self.clientTextVar.set(self.client)
 
         self.loadData()
 
@@ -24,6 +28,12 @@ class Echo(Frame):
         LABEL_WIDTH6 = 8
         LABEL_WIDTH7 = 8
         LABEL_WIDTH8 = 10
+
+        Label(f1, anchor = "w", width = LABEL_WIDTH1,
+            text = "Client").grid(row = 0, column = 0)
+        Label(f1, anchor = "w", width = LABEL_WIDTH2,
+            textvariable = self.clientTextVar).grid(row = 0, column = 1)
+
         Label(f1, anchor = "w", width = LABEL_WIDTH1,
             text = "Date").grid(row = 1, column = 0)
         Label(f1, anchor = "w", width = LABEL_WIDTH1,
@@ -161,20 +171,22 @@ class Echo(Frame):
         f2 = ScrollableFrame(self, height = 150)
 
         # Listbox all the basic pet information
-        self.numEntries = len(self.data.values)
-        self.listBox = ttk.Treeview(f2.scrollable_frame, height = self.numEntries, columns = list(self.data.columns), show = 'headings')
+        self.numEntries = 0
+        self.listBox = ttk.Treeview(f2.scrollable_frame, columns = list(self.data.columns), show = 'headings')
+
         i = 0
-        for col in self.data.columns:
+        for col in self.data.columns[1:]:
             self.listBox.heading(i, text = col)
             self.listBox.column(i, width = DEFAULT_COLUMN_WIDTH)
             i += 1
-        i = 0
         for item in self.data.values:
-            self.listBox.insert("", "end", text = str(i), values = list(item))
-            i += 1
+            if (item[0] == self.client):
+                self.listBox.insert("", "end", values = list(item)[1:])
+                self.numEntries += 1
+        self.listBox.configure(height = self.numEntries)
 
         # Get info on click
-        self.listBox.bind("<Double-1>", self.fillFields)
+        self.listBox.bind("<Double-1>", self.onSelection)
 
         self.listBox.pack(fill = BOTH, expand = True)
         f2.pack(fill = BOTH, expand = True, pady = 10)
@@ -197,80 +209,79 @@ class Echo(Frame):
         except ValueError:
             self.delt3.set("")
 
-    def saveData(self):
-        # Create the data folder if it doesn't exist
-        if not path.exists(DATA_DIR):
-            os.mkdir(DATA_DIR)
-        # Save data
-        self.data.to_pickle(DATA_PATH_ECHO)
-
     def loadData(self):
         # Read data
         if path.exists(DATA_PATH_ECHO):
             self.data = pd.read_pickle(DATA_PATH_ECHO)
         else:
-            # Or create data
-            d = {'Date': [],
-                'Tape': [],
-                'LBS': [],
-                'HR': [],
-                'RR': [],
-                'RVd': [],
-                'IVSd': [],
-                'LVIDd': [],
-                'LVWd': [],
-                'RVs': [],
-                'IVSs': [],
-                'LVIDs': [],
-                'LVWs': [],
-                'Ao': [],
-                'LA': [],
-                'LAm': [],
-                'EPSS': [],
-                'SAxLA D': [],
-                'SAx Ao D': [],
-                'SAx LA A': [],
-                'LAx LA D': [],
-                'Dep': [],
-                'Len': [],
-                'Gir': [],
-                'Wld': []}
-            self.data = pd.DataFrame(d)
+            self.initializeData()
 
-    def fillFields(self, event = None):
+    def initializeData(self):
+        d = {
+            'ClientNum': [],
+            'Date': [],
+            'Tape': [],
+            'LBS': [],
+            'HR': [],
+            'RR': [],
+            'RVd': [],
+            'IVSd': [],
+            'LVIDd': [],
+            'LVWd': [],
+            'RVs': [],
+            'IVSs': [],
+            'LVIDs': [],
+            'LVWs': [],
+            'Ao': [],
+            'LA': [],
+            'LAm': [],
+            'EPSS': [],
+            'SAxLA D': [],
+            'SAx Ao D': [],
+            'SAx LA A': [],
+            'LAx LA D': [],
+            'Dep': [],
+            'Len': [],
+            'Gir': [],
+            'Wld': []}
+        self.data = pd.DataFrame(d)
+
+    def onSelection(self, event = None):
         if self.listBox.selection():
             item = self.listBox.selection()[0]
             values = self.listBox.item(item, "values")
+            self.fillFields(values)
+            self.delete.configure(state = "normal", command = lambda: self.deleteDataItem(item))
 
+    def fillFields(self, values):
             self.date.set_date(values[0])
-            self.setText(self.tape, values[1])
-            self.setText(self.lbs, values[2])
-            self.setText(self.kgs, "") #TODO: Where are some of these fields stored?
-            self.setText(self.bsa, "")
-            self.setText(self.hr, values[3])
-            self.setText(self.rr, values[4])
-            self.setText(self.ao, values[13])
-            self.setText(self.la, values[14])
-            self.setText(self.la2, "")
-            self.setText(self.la2d, "")
-            self.setText(self.epss, values[16])
+            setText(self.tape, values[1])
+            setText(self.lbs, values[2])
+            setText(self.kgs, "") #TODO: Where are some of these fields stored?
+            setText(self.bsa, "")
+            setText(self.hr, values[3])
+            setText(self.rr, values[4])
+            setText(self.ao, values[13])
+            setText(self.la, values[14])
+            setText(self.la2, "")
+            setText(self.la2d, "")
+            setText(self.epss, values[16])
             self.calcgroup.set("")
-            self.setText(self.rv, values[9])
-            self.setText(self.rv2, values[5])
-            self.setText(self.ivs, values[10])
-            self.setText(self.ivs2, values[6])
-            self.setText(self.lvid, values[11])
-            self.setText(self.lvid2, values[7])
-            self.setText(self.lvw, values[12])
-            self.setText(self.lvw2, values[8])
+            setText(self.rv, values[9])
+            setText(self.rv2, values[5])
+            setText(self.ivs, values[10])
+            setText(self.ivs2, values[6])
+            setText(self.lvid, values[11])
+            setText(self.lvid2, values[7])
+            setText(self.lvw, values[12])
+            setText(self.lvw2, values[8])
             self.vidxtext.set("")
             self.vidxtext2.set("")
             self.updateDeltas()
 
-            self.delete.configure(state = "normal", command = lambda: self.deleteDataItem(item))
-
     def modify(self, item):
         moddedData = {
+            'ClientNum': self.client,
             'Date': self.date.get(),
             'Tape': self.tape.get("1.0", "end-1c"),
             'LBS': self.lbs.get("1.0", "end-1c"),
@@ -303,32 +314,32 @@ class Echo(Frame):
         self.data.loc[row] = list(moddedData.values())
         self.clearFields()
 
-        self.saveData()
+        saveData(self.data, DATA_PATH_ECHO)
 
     def clearFields(self):
         self.date.set_date(date.today())
-        self.setText(self.tape, "")
-        self.setText(self.lbs, "")
-        self.setText(self.kgs, "")
-        self.setText(self.bsa, "")
-        self.setText(self.hr, "")
-        self.setText(self.rr, "")
-        self.setText(self.ao, "")
-        self.setText(self.la, "")
-        self.setText(self.la2, "")
-        self.setText(self.la2d, "")
-        self.setText(self.epss, "")
+        setText(self.tape, "")
+        setText(self.lbs, "")
+        setText(self.kgs, "")
+        setText(self.bsa, "")
+        setText(self.hr, "")
+        setText(self.rr, "")
+        setText(self.ao, "")
+        setText(self.la, "")
+        setText(self.la2, "")
+        setText(self.la2d, "")
+        setText(self.epss, "")
         self.calcgroup.set("")
-        self.setText(self.rv, "")
-        self.setText(self.rv2, "")
-        self.setText(self.ivs, "")
-        self.setText(self.ivs2, "")
+        setText(self.rv, "")
+        setText(self.rv2, "")
+        setText(self.ivs, "")
+        setText(self.ivs2, "")
         self.delt1.set("")
-        self.setText(self.lvid, "")
-        self.setText(self.lvid2, "")
+        setText(self.lvid, "")
+        setText(self.lvid2, "")
         self.delt2.set("")
-        self.setText(self.lvw, "")
-        self.setText(self.lvw2, "")
+        setText(self.lvw, "")
+        setText(self.lvw2, "")
         self.delt3.set("")
         self.vidxtext.set("")
         self.vidxtext2.set("")
@@ -337,7 +348,6 @@ class Echo(Frame):
         self.delete.configure(state = "disabled", command = None)
 
     def deleteDataItem(self, item):
-        # TODO make this work
         row = int(item[-1]) - 1
         self.listBox.delete(item)
 
@@ -345,7 +355,7 @@ class Echo(Frame):
         self.listBox.configure(height = self.numEntries)
 
         self.data = self.data.drop(self.data.index[row])
-        self.saveData()
+        saveData(self.data, DATA_PATH_ECHO)
         self.clearFields()
 
     def indices(self):
@@ -354,6 +364,7 @@ class Echo(Frame):
 
 
         newData = {
+            'ClientNum': self.client,
             'Date': self.date.get(),
             'Tape': self.tape.get("1.0", "end-1c"),
             'LBS': self.lbs.get("1.0", "end-1c"),
@@ -387,8 +398,23 @@ class Echo(Frame):
         self.numEntries += 1
         self.listBox.configure(height = self.numEntries)
 
-        self.saveData()
+        saveData(self.data, DATA_PATH_ECHO)
 
-    def setText(self, widget, value):
-        widget.delete(1.0, "end-1c")
-        widget.insert("end-1c", value)
+    def updateClient(self, client):
+        self.client = client[1]
+        self.clientTextVar.set(client[2])
+        self.listBox.delete(*self.listBox.get_children())
+        self.numEntries = 0
+        for item in self.data.values:
+            if (item[0] == self.client):
+                self.listBox.insert("", "end", values = list(item)[1:])
+                self.numEntries += 1
+        self.listBox.configure(height = self.numEntries)
+
+    def modifiedClient(self, client):
+        # We need to update the corresponding client number here when it's updated in Client
+        for item in self.data.values:
+            if (item[0] == self.client):
+                item[0] = client[1]
+        self.updateClient(client)
+        saveData(self.data, DATA_PATH_ECHO)
