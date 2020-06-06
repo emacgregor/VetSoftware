@@ -119,7 +119,7 @@ class Client(ttk.Frame):
         i = 0
         for col in self.data.columns:
             self.listBox.heading(i, text = col)
-            self.listBox.column(i, width = DEFAULT_COLUMN_WIDTH)
+            self.listBox.column(i, width = columnWidth(len(self.data.columns)))
             i += 1
         for item in self.data.values:
             self.listBox.insert("", "end", values = list(item))
@@ -266,7 +266,6 @@ class Client(ttk.Frame):
         setText(self.rdvmPhone1, values[22])
         setText(self.rdvmPhone2, values[23])
         setText(self.rdvmFAX, values[24])
-
 
     def modify(self, item):
         moddedData = {

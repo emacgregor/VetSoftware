@@ -1,12 +1,17 @@
 import os
+import math
 from tkinter import *
 from tkinter import ttk
 
 DATA_DIR = '../data/'
 DATA_PATH_CLIENT = DATA_DIR + 'client.pkl'
 DATA_PATH_ECHO = DATA_DIR + 'echo.pkl'
+DATA_PATH_RDVMS = DATA_DIR + 'rdvms.pkl'
 DEFAULT_COLUMN_WIDTH = 70
 CLINICIANS = ["JMcG", "EMcG"]
+WIDTH = 860
+HEIGHT = 700
+PADDING = 15
 
 def setText(widget, value):
     widget.delete(1.0, "end-1c")
@@ -18,6 +23,10 @@ def saveData(data, path):
         os.mkdir(DATA_DIR)
     # Save data
     data.to_pickle(path)
+
+def columnWidth(numColumns):
+	# 46 is for the width of the scrollbar
+	return max(DEFAULT_COLUMN_WIDTH, math.floor((WIDTH - PADDING * 2 - 46) / numColumns))
 
 # Thanks to Bryan Oakley on Stack Overflow https://stackoverflow.com/questions/40617515/python-tkinter-text-modified-callback
 class CustomText(Text):

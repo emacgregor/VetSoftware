@@ -36,11 +36,11 @@ class Form(ttk.Frame):
         self.tabs = [self.studies, self.echo, self.rdvms, self.print]
 
         self.buttons = [self.studiesB, self.echoB, self.rdvmsB, self.printB]
-        self.button = self.studiesB
+        self.button = self.rdvmsB
         self.button.configure(state = "disabled")
 
-        self.tab = self.studies
-        self.tab.pack(fill = X)
+        self.tab = self.rdvms
+        self.tab.pack(fill = X, pady = (10, 0))
 
     def updateClient(self, client):
         self.client = client
@@ -53,7 +53,7 @@ class Form(ttk.Frame):
     def changeTab(self, tab):
         self.tab.pack_forget()
         self.tab = self.tabs[tab]
-        self.tab.pack(fill = X)
+        self.tab.pack(fill = X, pady = (10, 0))
 
         self.button.configure(state = "active")
         self.button = self.buttons[tab]

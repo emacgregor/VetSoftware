@@ -177,7 +177,7 @@ class Echo(Frame):
         i = 0
         for col in self.data.columns[1:]:
             self.listBox.heading(i, text = col)
-            self.listBox.column(i, width = DEFAULT_COLUMN_WIDTH)
+            self.listBox.column(i, width = columnWidth(len(self.data.columns)))
             i += 1
         for item in self.data.values:
             if (item[0] == self.client):

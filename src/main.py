@@ -6,11 +6,11 @@ from util import *
 root = Tk()
 
 root.title("Veterinary Software")
-root.geometry("860x700")
+root.geometry(str(WIDTH) + "x" + str(HEIGHT))
 
 # Fills with the form information.
 f1 = ScrollableFrame(root)
-f2 = Form(f1.scrollable_frame).pack(padx = 15, pady = 15, fill = BOTH, expand = True)
+f2 = Form(f1.scrollable_frame).pack(padx = PADDING, pady = PADDING, fill = BOTH, expand = True)
 f1.pack(fill = BOTH, expand = True)
 
 # Start the GUI
