@@ -7,13 +7,12 @@ from tkcalendar import DateEntry
 from Echo import Echo
 from util import *
 
-RDVMS = ["Falmouth Veterinary Medicine"]
-
 class Client(ttk.Frame):
     def __init__(self, parent):
         Frame.__init__(self, parent)
         self.parent = parent
         self.loadData()
+        self.loadRDVMs()
 
         f1 = Frame(self)
         f1.pack(fill = X)
@@ -94,8 +93,9 @@ class Client(ttk.Frame):
         self.rdvmFirst = Text(f1, width = 12, height = 1)
         self.rdvmFirst.grid(row = 3, column = 5, sticky = "w", padx = (105, 0))
         self.practiceText = StringVar()
-        self.practice = ttk.Combobox(f1, width = 31, text = self.practiceText, values = RDVMS)
+        self.practice = ttk.Combobox(f1, width = 31, text = self.practiceText, values = list(self.rdvms.iloc[:,0]))
         self.practice.grid(row = 4, column = 5, sticky = "w")
+        self.practice.bind("<<ComboboxSelected>>", self.onPracticeSelection)
         self.rdvmPhone1 = Text(f1, width = 12, height = 1)
         self.rdvmPhone1.grid(row = 5, column = 5, sticky = "w")
         self.rdvmPhone2 = Text(f1, width = 12, height = 1)
@@ -125,7 +125,7 @@ class Client(ttk.Frame):
             self.listBox.insert("", "end", values = list(item))
 
         # Get info on click
-        self.listBox.bind("<Double-1>", self.onSelection)
+        self.listBox.bind("<Double-1>", self.onTableSelection)
 
         self.listBox.pack(fill = BOTH, expand = True)
         f2.pack(fill = BOTH, expand = True, pady = 10)
@@ -232,7 +232,7 @@ class Client(ttk.Frame):
 
         self.submitButton.configure(text = "Submit", command = self.submit)
 
-    def onSelection(self, event = None):
+    def onTableSelection(self, event = None):
         if self.listBox.selection():
             item = self.listBox.selection()[0]
             values = self.listBox.item(item, "values")
@@ -303,3 +303,40 @@ class Client(ttk.Frame):
         self.parent.modifiedData(list(moddedData.values()))
 
         saveData(self.data, DATA_PATH_CLIENT)
+
+    def loadRDVMs(self):
+        # Read data
+        if path.exists(DATA_PATH_RDVMS):
+            self.rdvms = pd.read_pickle(DATA_PATH_RDVMS)
+        else:
+            self.initializeRDVMs()
+
+    def initializeRDVMs(self):
+        d = {'Practice': [],
+            'Address': [],
+            'City': [],
+            'ST': [],
+            'Zip': [],
+            'Ph1': [],
+            'Ph2': [],
+            'FAX': []}
+        self.data = pd.DataFrame(d)
+
+    def updateRDVMs(self):
+        self.loadRDVMs()
+        self.practice.configure(values = list(self.rdvms.iloc[:,0]))
+        self.onPracticeSelection()
+
+    def onPracticeSelection(self, event = None):
+        # The if exists to handle if the user deletes the rdvm currently selected
+        if len(self.rdvms.loc[self.rdvms['Practice'] == self.practiceText.get()]) > 0:
+            # In the case of multiple practice with the exact same name, just get the first one
+            selection = self.rdvms.loc[self.rdvms['Practice'] == self.practiceText.get()].iloc[0, :]
+            setText(self.rdvmPhone1, selection['Ph1'])
+            setText(self.rdvmPhone2, selection['Ph2'])
+            setText(self.rdvmFAX, selection['FAX'])
+        else:
+            self.practiceText.set('')
+            setText(self.rdvmPhone1, '')
+            setText(self.rdvmPhone2, '')
+            setText(self.rdvmFAX, '')

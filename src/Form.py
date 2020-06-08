@@ -11,8 +11,8 @@ class Form(ttk.Frame):
         Frame.__init__(self, parent)
         self.client = []
 
-        f1 = Client(self)
-        f1.pack(fill = X)
+        self.clientPanel = Client(self)
+        self.clientPanel.pack(fill = X)
 
         f2 = Frame(self)
         self.studiesB = Button(f2, text = "Studies",
@@ -58,3 +58,6 @@ class Form(ttk.Frame):
         self.button.configure(state = "active")
         self.button = self.buttons[tab]
         self.button.configure(state = "disabled")
+
+    def updateRDVMs(self):
+        self.clientPanel.updateRDVMs()

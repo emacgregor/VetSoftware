@@ -7,6 +7,7 @@ from os import path
 class RDVMs(ttk.Frame):
     def __init__(self, parent):
         Frame.__init__(self, parent)
+        self.parent = parent
         self.loadData()
 
         f1 = Frame(self)
@@ -137,12 +138,11 @@ class RDVMs(ttk.Frame):
 
         self.listBox.insert("", "end", values = list(newData.values()))
         self.data = self.data.append(newData, ignore_index = True)
-        self.clearFields()
-
         self.numEntries += 1
         self.listBox.configure(height = self.numEntries)
 
-        saveData(self.data, DATA_PATH_RDVMS)
+        self.clearFields()
+        self.saveAndUpdate()
 
     def modify(self, item):
         moddedData = {'Practice': self.practice.get("1.0", "end-1c"),
@@ -158,9 +158,9 @@ class RDVMs(ttk.Frame):
         row = int(item[-1]) - 1
 
         self.data.loc[row] = list(moddedData.values())
-        self.clearFields()
 
-        saveData(self.data, DATA_PATH_RDVMS)
+        self.clearFields()
+        self.saveAndUpdate()
 
     def deleteDataItem(self, item):
         row = int(item[-1]) - 1
@@ -170,5 +170,13 @@ class RDVMs(ttk.Frame):
         self.listBox.configure(height = self.numEntries)
 
         self.data = self.data.drop(self.data.index[row])
-        saveData(self.data, DATA_PATH_RDVMS)
+
         self.clearFields()
+        self.saveAndUpdate()
+
+    def updateParent(self):
+        self.parent.updateRDVMs()
+
+    def saveAndUpdate(self):
+        saveData(self.data, DATA_PATH_RDVMS)
+        self.updateParent()
