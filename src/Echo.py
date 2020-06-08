@@ -348,13 +348,13 @@ class Echo(Frame):
         self.delete.configure(state = "disabled", command = None)
 
     def deleteDataItem(self, item):
-        row = int(item[-1]) - 1
+        row = self.listBox.index(item)
         self.listBox.delete(item)
 
         self.numEntries -= 1
         self.listBox.configure(height = self.numEntries)
 
-        self.data = self.data.drop(self.data.index[row])
+        self.data = self.data.drop(self.data[self.data["ClientNum"] == self.client].index[row])
         saveData(self.data, DATA_PATH_ECHO)
         self.clearFields()
 
@@ -391,7 +391,7 @@ class Echo(Frame):
             'Gir': "",
             'Wld': ""}
 
-        self.listBox.insert("", "end", values = list(newData.values()))
+        self.listBox.insert("", "end", values = list(newData.values())[1:])
         self.data = self.data.append(newData, ignore_index = True)
         self.clearFields()
 

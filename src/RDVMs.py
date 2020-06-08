@@ -59,24 +59,12 @@ class RDVMs(ttk.Frame):
         self.clearButton.grid(row = 0, column = 7)
 
         # Fills with the form information.
-        f2 = ScrollableFrame(self, height = 150)
+        self.f2 = ScrollableFrame(self, height = 150)
 
-        # Listbox all the basic pet information
-        self.numEntries = len(self.data.values)
-        self.listBox = ttk.Treeview(f2.scrollable_frame, height = self.numEntries, columns = list(self.data.columns), show = 'headings')
-        i = 0
-        for col in self.data.columns:
-            self.listBox.heading(i, text = col)
-            self.listBox.column(i, width = columnWidth(len(self.data.columns)))
-            i += 1
-        for item in self.data.values:
-            self.listBox.insert("", "end", values = list(item))
+        self.listBox = None
+        self.buildTable()
 
-        # Get info on click
-        self.listBox.bind("<Double-1>", self.onSelection)
-
-        self.listBox.pack(fill = BOTH, expand = True)
-        f2.pack(fill = BOTH, expand = True, pady = 10)
+        self.f2.pack(fill = BOTH, expand = True, pady = 10)
 
     def loadData(self):
         # Read data
@@ -126,6 +114,26 @@ class RDVMs(ttk.Frame):
         self.submitButton.configure(text = "Submit", command = self.submit)
         self.deleteButton.configure(state = "disabled")
 
+    def buildTable(self):
+        # Listbox contains all the basic pet information
+        self.numEntries = len(self.data.values)
+
+        if self.listBox is not None:
+            self.listBox.pack_forget()
+        self.listBox = ttk.Treeview(self.f2.scrollable_frame, height = self.numEntries, columns = list(self.data.columns), show = 'headings')
+        i = 0
+        for col in self.data.columns:
+            self.listBox.heading(i, text = col)
+            self.listBox.column(i, width = columnWidth(len(self.data.columns)))
+            i += 1
+        for item in self.data.values:
+            self.listBox.insert("", "end", values = list(item))
+
+        # Get info on click
+        self.listBox.bind("<Double-1>", self.onSelection)
+
+        self.listBox.pack(fill = BOTH, expand = True)
+
     def submit(self, event = None):
         newData = {'Practice': self.practice.get("1.0", "end-1c"),
             'Address': self.address.get("1.0", "end-1c"),
@@ -136,10 +144,9 @@ class RDVMs(ttk.Frame):
             'Ph2': self.ph2.get("1.0", "end-1c"),
             'FAX': self.fax.get("1.0", "end-1c")}
 
-        self.listBox.insert("", "end", values = list(newData.values()))
         self.data = self.data.append(newData, ignore_index = True)
-        self.numEntries += 1
-        self.listBox.configure(height = self.numEntries)
+        self.data = self.data.drop_duplicates(subset = "Practice", keep = 'last')
+        self.buildTable()
 
         self.clearFields()
         self.saveAndUpdate()
@@ -163,7 +170,8 @@ class RDVMs(ttk.Frame):
         self.saveAndUpdate()
 
     def deleteDataItem(self, item):
-        row = int(item[-1]) - 1
+        row = self.listBox.index(item)
+        print(row)
         self.listBox.delete(item)
 
         self.numEntries -= 1
