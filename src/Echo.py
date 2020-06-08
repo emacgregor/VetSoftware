@@ -166,6 +166,12 @@ class Echo(Frame):
         self.indices = Button(f1, text = "Indices", fg = "Black",
             command = self.indices)
         self.indices.grid(row = 2, column = 11)
+        self.submit = Button(f1, text = "Submit", fg = "Black",
+            command = self.submit)
+        self.submit.grid(row = 3, column = 11)
+        self.clearButton = Button(f1, text = "New", fg = "Black",
+            command = self.clearFields)
+        self.clearButton.grid(row = 4, column = 11)
 
         # Fills with the form information.
         f2 = ScrollableFrame(self, height = 150)
@@ -183,7 +189,7 @@ class Echo(Frame):
             if (item[0] == self.client):
                 self.listBox.insert("", "end", values = list(item)[1:])
                 self.numEntries += 1
-        self.listBox.configure(height = self.numEntries)
+        self.listBox.configure(height = max(self.numEntries, 6))
 
         # Get info on click
         self.listBox.bind("<Double-1>", self.onSelection)
@@ -252,6 +258,7 @@ class Echo(Frame):
             values = self.listBox.item(item, "values")
             self.fillFields(values)
             self.delete.configure(state = "normal", command = lambda: self.deleteDataItem(item))
+            self.submit.configure(text = "Modify", command = lambda: self.modify(item))
 
     def fillFields(self, values):
             self.date.set_date(values[0])
@@ -278,43 +285,6 @@ class Echo(Frame):
             self.vidxtext.set("")
             self.vidxtext2.set("")
             self.updateDeltas()
-
-    def modify(self, item):
-        moddedData = {
-            'ClientNum': self.client,
-            'Date': self.date.get(),
-            'Tape': self.tape.get("1.0", "end-1c"),
-            'LBS': self.lbs.get("1.0", "end-1c"),
-            'HR': self.hr.get("1.0", "end-1c"),
-            'RR': self.rr.get("1.0", "end-1c"),
-            'RVd': self.rv2.get("1.0", "end-1c"),
-            'IVSd': self.ivs2.get("1.0", "end-1c"),
-            'LVIDd': self.lvid2.get("1.0", "end-1c"),
-            'LVWd': self.lvw2.get("1.0", "end-1c"),
-            'RVs': self.rv.get("1.0", "end-1c"),
-            'IVSs': self.ivs.get("1.0", "end-1c"),
-            'LVIDs': self.lvid.get("1.0", "end-1c"),
-            'LVWs': self.lvw.get("1.0", "end-1c"),
-            'Ao': self.ao.get("1.0", "end-1c"),
-            'LA': self.la.get("1.0", "end-1c"),
-            'LAm': "", # TODO: What are these fields?
-            'EPSS': "",
-            'SAxLA D': "",
-            'SAx Ao D': "",
-            'SAx LA A': "",
-            'LAx LA D': "",
-            'Dep': "",
-            'Len': "",
-            'Gir': "",
-            'Wld': ""}
-        self.listBox.item(item, values = list(moddedData.values()))
-
-        row = int(item[-1]) - 1
-
-        self.data.loc[row] = list(moddedData.values())
-        self.clearFields()
-
-        saveData(self.data, DATA_PATH_ECHO)
 
     def clearFields(self):
         self.date.set_date(date.today())
@@ -346,23 +316,62 @@ class Echo(Frame):
         self.delt4.set("")
 
         self.delete.configure(state = "disabled", command = None)
+        self.submit.configure(text = "Submit", command = self.submit)
 
     def deleteDataItem(self, item):
         row = self.listBox.index(item)
         self.listBox.delete(item)
 
         self.numEntries -= 1
-        self.listBox.configure(height = self.numEntries)
+        self.listBox.configure(height = max(self.numEntries, 6))
 
         self.data = self.data.drop(self.data[self.data["ClientNum"] == self.client].index[row])
-        saveData(self.data, DATA_PATH_ECHO)
+        self.saveData()
         self.clearFields()
 
+    def modify(self, item):
+        moddedData = {
+            'ClientNum': self.client,
+            'Date': self.date.get(),
+            'Tape': self.tape.get("1.0", "end-1c"),
+            'LBS': self.lbs.get("1.0", "end-1c"),
+            'HR': self.hr.get("1.0", "end-1c"),
+            'RR': self.rr.get("1.0", "end-1c"),
+            'RVd': self.rv2.get("1.0", "end-1c"),
+            'IVSd': self.ivs2.get("1.0", "end-1c"),
+            'LVIDd': self.lvid2.get("1.0", "end-1c"),
+            'LVWd': self.lvw2.get("1.0", "end-1c"),
+            'RVs': self.rv.get("1.0", "end-1c"),
+            'IVSs': self.ivs.get("1.0", "end-1c"),
+            'LVIDs': self.lvid.get("1.0", "end-1c"),
+            'LVWs': self.lvw.get("1.0", "end-1c"),
+            'Ao': self.ao.get("1.0", "end-1c"),
+            'LA': self.la.get("1.0", "end-1c"),
+            'LAm': "", # TODO: What are these fields?
+            'EPSS': "",
+            'SAxLA D': "",
+            'SAx Ao D': "",
+            'SAx LA A': "",
+            'LAx LA D': "",
+            'Dep': "",
+            'Len': "",
+            'Gir': "",
+            'Wld': ""}
+        self.listBox.item(item, values = list(moddedData.values())[1:])
+
+        row = self.listBox.index(item)
+
+        index = self.data[self.data["ClientNum"] == self.client].index[row]
+        self.data.loc[index] = list(moddedData.values())
+
+        self.clearFields()
+
+        self.saveData()
+
     def indices(self):
-        # TODO this is acting like a submit, when it really does something else
         print("Indices")
 
-
+    def submit(self):
         newData = {
             'ClientNum': self.client,
             'Date': self.date.get(),
@@ -396,20 +405,30 @@ class Echo(Frame):
         self.clearFields()
 
         self.numEntries += 1
-        self.listBox.configure(height = self.numEntries)
+        self.listBox.configure(height = max(self.numEntries, 6))
 
-        saveData(self.data, DATA_PATH_ECHO)
+        self.saveData()
 
     def updateClient(self, client):
-        self.client = client[1]
-        self.clientTextVar.set(client[2])
-        self.listBox.delete(*self.listBox.get_children())
-        self.numEntries = 0
-        for item in self.data.values:
-            if (item[0] == self.client):
-                self.listBox.insert("", "end", values = list(item)[1:])
-                self.numEntries += 1
-        self.listBox.configure(height = self.numEntries)
+        if len(client) > 2:
+            self.client = client[1]
+            self.clientTextVar.set(client[2])
+            self.listBox.delete(*self.listBox.get_children())
+            self.numEntries = 0
+            for item in self.data.values:
+                if (item[0] == self.client):
+                    self.listBox.insert("", "end", values = list(item)[1:])
+                    self.numEntries += 1
+            self.listBox.configure(height = max(self.numEntries, 6))
+        else:
+            self.client = None
+            self.clientTextVar.set('')
+            self.listBox.delete(*self.listBox.get_children())
+            self.numEntries = 0
+            self.listBox.configure(height = max(self.numEntries, 6))
+
+    def saveData(self):
+        saveData(self.data, DATA_PATH_ECHO)
 
     def modifiedClient(self, client):
         # We need to update the corresponding client number here when it's updated in Client
@@ -417,4 +436,4 @@ class Echo(Frame):
             if (item[0] == self.client):
                 item[0] = client[1]
         self.updateClient(client)
-        saveData(self.data, DATA_PATH_ECHO)
+        self.saveData()

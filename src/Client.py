@@ -108,15 +108,36 @@ class Client(ttk.Frame):
             command = self.submit)
         self.submitButton.grid(row = 6, column = 5)
 
+        self.clearButton = Button(f1, text = "New", fg = "Black",
+            command = self.clearFields)
+        self.clearButton.grid(row = 6, column = 4)
+
+        self.deleteButton = Button(f1, text = "Delete", fg = "Black",
+            state = "disabled")
+        self.deleteButton.grid(row = 6, column = 3)
+
         # Frame 2 contains the information on pets
 
         # Fills with the form information.
-        self.f2 = ScrollableFrame(self, height = 150)
+        f2 = ScrollableFrame(self, height = 150)
 
-        self.listBox = None
-        self.buildTable()
+        # Listbox contains all the basic pet information
+        self.numEntries = len(self.data.values)
+        self.listBox = ttk.Treeview(f2.scrollable_frame, height = max(self.numEntries, 6), columns = list(self.data.columns), show = 'headings')
+        i = 0
+        for col in self.data.columns:
+            self.listBox.heading(i, text = col)
+            self.listBox.column(i, width = columnWidth(len(self.data.columns)))
+            i += 1
+        for item in self.data.values:
+            self.listBox.insert("", "end", values = list(item))
 
-        self.f2.pack(fill = BOTH, expand = True, pady = 10)
+        # Get info on click
+        self.listBox.bind("<Double-1>", self.onTableSelection)
+
+        self.listBox.pack(fill = BOTH, expand = True)
+
+        f2.pack(fill = BOTH, expand = True, pady = 10)
 
 
     def loadData(self):
@@ -187,7 +208,7 @@ class Client(ttk.Frame):
         self.clearFields()
 
         self.numEntries += 1
-        self.listBox.configure(height = self.numEntries)
+        self.listBox.configure(height = max(self.numEntries, 6))
 
         self.saveData()
 
@@ -218,7 +239,9 @@ class Client(ttk.Frame):
         setText(self.rdvmPhone2, "")
         setText(self.rdvmFAX, "")
 
+        self.parent.updateClient([])
         self.submitButton.configure(text = "Submit", command = self.submit)
+        self.deleteButton.configure(state = "disabled")
 
     def onTableSelection(self, event = None):
         if self.listBox.selection():
@@ -226,6 +249,7 @@ class Client(ttk.Frame):
             values = self.listBox.item(item, "values")
             self.fillFields(values)
             self.submitButton.configure(text = "Modify", command = lambda: self.modify(item))
+            self.deleteButton.configure(state = "normal", command = lambda: self.deleteDataItem(item))
             self.parent.updateClient(values)
 
     def fillFields(self, values):
@@ -316,26 +340,12 @@ class Client(ttk.Frame):
         self.practice.configure(values = list(self.rdvms.iloc[:,0]))
         self.onPracticeSelection()
 
-    def buildTable(self):
-        # Listbox contains all the basic pet information
+    def rebuildTable(self):
         self.numEntries = len(self.data.values)
-
-        if self.listBox is not None:
-            self.listBox.pack_forget()
-        self.listBox = ttk.Treeview(self.f2.scrollable_frame, height = self.numEntries, columns = list(self.data.columns), show = 'headings')
-        i = 0
-        for col in self.data.columns:
-            self.listBox.heading(i, text = col)
-            self.listBox.column(i, width = columnWidth(len(self.data.columns)))
-            i += 1
+        self.listBox.delete(*self.listBox.get_children())
         for item in self.data.values:
             self.listBox.insert("", "end", values = list(item))
-
-        # Get info on click
-        self.listBox.bind("<Double-1>", self.onTableSelection)
-
-        self.listBox.pack(fill = BOTH, expand = True)
-
+        self.listBox.configure(height = max(self.numEntries, 6))
 
     def updateClientRDVMs(self):
         clientData = self.data.drop(columns = ['RDVM phone 1', 'RDVM phone 2', 'RDVM fax'])
@@ -349,7 +359,7 @@ class Client(ttk.Frame):
         clientData.loc[noRDVM, 'RDVM fax'] = ''
         self.data = clientData
         self.saveData()
-        self.buildTable()
+        self.rebuildTable()
 
     def onPracticeSelection(self, event = None):
         # The if exists to handle if the user deletes the rdvm currently selected
@@ -367,3 +377,15 @@ class Client(ttk.Frame):
 
     def saveData(self):
         saveData(self.data, DATA_PATH_CLIENT)
+
+    def deleteDataItem(self, item):
+        row = self.listBox.index(item)
+        self.listBox.delete(item)
+
+        self.numEntries -= 1
+        self.listBox.configure(height = max(self.numEntries, 6))
+
+        self.data = self.data.drop(self.data.index[row])
+
+        self.clearFields()
+        self.saveData()
