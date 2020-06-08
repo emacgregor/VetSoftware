@@ -111,24 +111,12 @@ class Client(ttk.Frame):
         # Frame 2 contains the information on pets
 
         # Fills with the form information.
-        f2 = ScrollableFrame(self, height = 150)
+        self.f2 = ScrollableFrame(self, height = 150)
 
-        # Listbox all the basic pet information
-        self.numEntries = len(self.data.values)
-        self.listBox = ttk.Treeview(f2.scrollable_frame, height = self.numEntries, columns = list(self.data.columns), show = 'headings')
-        i = 0
-        for col in self.data.columns:
-            self.listBox.heading(i, text = col)
-            self.listBox.column(i, width = columnWidth(len(self.data.columns)))
-            i += 1
-        for item in self.data.values:
-            self.listBox.insert("", "end", values = list(item))
+        self.listBox = None
+        self.buildTable()
 
-        # Get info on click
-        self.listBox.bind("<Double-1>", self.onTableSelection)
-
-        self.listBox.pack(fill = BOTH, expand = True)
-        f2.pack(fill = BOTH, expand = True, pady = 10)
+        self.f2.pack(fill = BOTH, expand = True, pady = 10)
 
 
     def loadData(self):
@@ -201,7 +189,7 @@ class Client(ttk.Frame):
         self.numEntries += 1
         self.listBox.configure(height = self.numEntries)
 
-        saveData(self.data, DATA_PATH_CLIENT)
+        self.saveData()
 
     def clearFields(self):
         setText(self.caseNum, "")
@@ -302,7 +290,7 @@ class Client(ttk.Frame):
         self.clearFields()
         self.parent.modifiedData(list(moddedData.values()))
 
-        saveData(self.data, DATA_PATH_CLIENT)
+        self.saveData()
 
     def loadRDVMs(self):
         # Read data
@@ -320,12 +308,48 @@ class Client(ttk.Frame):
             'Ph1': [],
             'Ph2': [],
             'FAX': []}
-        self.data = pd.DataFrame(d)
+        self.rdvms = pd.DataFrame(d)
 
     def updateRDVMs(self):
         self.loadRDVMs()
+        self.updateClientRDVMs()
         self.practice.configure(values = list(self.rdvms.iloc[:,0]))
         self.onPracticeSelection()
+
+    def buildTable(self):
+        # Listbox contains all the basic pet information
+        self.numEntries = len(self.data.values)
+
+        if self.listBox is not None:
+            self.listBox.pack_forget()
+        self.listBox = ttk.Treeview(self.f2.scrollable_frame, height = self.numEntries, columns = list(self.data.columns), show = 'headings')
+        i = 0
+        for col in self.data.columns:
+            self.listBox.heading(i, text = col)
+            self.listBox.column(i, width = columnWidth(len(self.data.columns)))
+            i += 1
+        for item in self.data.values:
+            self.listBox.insert("", "end", values = list(item))
+
+        # Get info on click
+        self.listBox.bind("<Double-1>", self.onTableSelection)
+
+        self.listBox.pack(fill = BOTH, expand = True)
+
+
+    def updateClientRDVMs(self):
+        clientData = self.data.drop(columns = ['RDVM phone 1', 'RDVM phone 2', 'RDVM fax'])
+        rdvmData = self.rdvms[['Practice', 'Ph1', 'Ph2', 'FAX']]
+        clientData = clientData.merge(rdvmData, how = 'left', on = 'Practice')
+        clientData = clientData.rename(columns = {"Ph1" : "RDVM phone 1", "Ph2": "RDVM phone 2", "FAX": "RDVM fax"})
+        noRDVM = clientData["RDVM phone 1"].isnull()
+        clientData.loc[noRDVM, 'Practice'] = ''
+        clientData.loc[noRDVM, 'RDVM phone 1'] = ''
+        clientData.loc[noRDVM, 'RDVM phone 2'] = ''
+        clientData.loc[noRDVM, 'RDVM fax'] = ''
+        self.data = clientData
+        self.saveData()
+        self.buildTable()
 
     def onPracticeSelection(self, event = None):
         # The if exists to handle if the user deletes the rdvm currently selected
@@ -340,3 +364,6 @@ class Client(ttk.Frame):
             setText(self.rdvmPhone1, '')
             setText(self.rdvmPhone2, '')
             setText(self.rdvmFAX, '')
+
+    def saveData(self):
+        saveData(self.data, DATA_PATH_CLIENT)
